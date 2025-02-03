@@ -2,31 +2,23 @@ require("dotenv").config();
 const puppeteer = require("puppeteer");
 const fs = require("fs");
 
-const chromiumPath =
-  process.env.NODE_ENV === 'production'
-    ? '/usr/bin/chromium' // Path for Render or production server
-    : 'C:/Program Files/Google/Chrome/Application/chrome.exe'; // Local path
-// const puppeteerCacheDir =
-//   process.env.PUPPETEER_CACHE_DIR || "/tmp/puppeteer_cache";
+// Use a unique Puppeteer cache directory for each run
+const puppeteerCacheDir = `/tmp/puppeteer_cache_${Date.now()}`;
 
-// if (!fs.existsSync(puppeteerCacheDir)) {
-//   fs.mkdirSync(puppeteerCacheDir, { recursive: true });
-// }
-
-const puppeteerCacheDir = process.env.PUPPETEER_CACHE_DIR || "/tmp/puppeteer_cache";
-
-if (fs.existsSync(puppeteerCacheDir)) {
-  try {
-    fs.rmSync(puppeteerCacheDir, { recursive: true, force: true });
-    console.log(`Cleared Puppeteer cache at ${puppeteerCacheDir}`);
-  } catch (error) {
-    console.error("Failed to clean cache directory:", error);
+// Ensure old cache is cleared
+try {
+  if (fs.existsSync("/tmp/puppeteer_cache")) {
+    fs.rmSync("/tmp/puppeteer_cache", { recursive: true, force: true });
+    console.log("Cleared old Puppeteer cache.");
   }
+} catch (error) {
+  console.error("Failed to clean Puppeteer cache:", error);
 }
+
 async function scrapeTeams(url, gender, scoringSystem) {
   const browser = await puppeteer.launch({
     headless: true,
-    userDataDir: puppeteerCacheDir,
+    userDataDir: puppeteerCacheDir, // Use a unique directory
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
@@ -38,10 +30,9 @@ async function scrapeTeams(url, gender, scoringSystem) {
       "--disable-extensions",
     ],
   });
-  
 
   const page = await browser.newPage();
-  await page.goto(url, { waitUntil: "networkidle2" , timeout: 120000 });
+  await page.goto(url, { waitUntil: "networkidle2", timeout: 120000 });
 
   let teamNameandScores = [];
   let teams = [];
@@ -89,17 +80,17 @@ async function scrapeTeams(url, gender, scoringSystem) {
           teamScores[index] += addtoscore;
         }
         // calculate points for next place based on scoring system
-        if (scoringSystem === "six"){
+        if (scoringSystem === "six") {
           //score top six
           addtoscore = addtoscore === 2 ? 1 : addtoscore - 2;
         }
-        else if (scoringSystem === "eight"){
+        else if (scoringSystem === "eight") {
           //score top eight
-          if (addtoscore > 6){
+          if (addtoscore > 6) {
             addtoscore = addtoscore - 2
           }
-          else{
-            addtoscore = addtoscore -1
+          else {
+            addtoscore = addtoscore - 1
           }
         }
       }
